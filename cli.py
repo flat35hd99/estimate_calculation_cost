@@ -13,11 +13,27 @@ def get_residue_id(residue):
     return id
 
 
+def remove_main_chain_atoms(entity):
+    for residue in entity.get_residues():
+        if residue.get_resname() in ["WAT", "Na+", "Cl-", "HOH", "NA"]:
+            continue
+        for atom in residue.get_atoms():
+            name = atom.get_name()
+            if name == "CA":
+                continue
+            if len(name) == 1:
+                continue
+            else:
+                residue.detach_child(atom.get_id())
+    return entity
+
+
 @click.command()
 @click.option("--pdb-code")
 @click.option("--pdb-file")
+@click.option("--sidechain/--residue", default=True)
 @click.option("--cutoff", default=6)
-def cli(pdb_code, pdb_file, cutoff):
+def cli(pdb_code, pdb_file, sidechain, cutoff):
     # Get structure
     if pdb_code is not None:
         pdb = PDBList()
@@ -26,6 +42,8 @@ def cli(pdb_code, pdb_file, cutoff):
         os.rmdir("obsolete")
     parser = PDBParser(QUIET=True)
     structure = parser.get_structure("protein", pdb_file)
+    if sidechain:
+        structure = remove_main_chain_atoms(structure)
 
     # Calculate the number of pairs
     residue_list = [
